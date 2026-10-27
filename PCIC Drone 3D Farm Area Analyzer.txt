@@ -1,0 +1,560 @@
+Build a geospatial application named:
+
+PCIC Drone 3D Farm Area Analyzer
+
+PURPOSE
+Create an application for the Philippine Crop Insurance Corporation (PCIC)
+that calculates and compares:
+
+1. Planimetric / horizontal farm area
+2. DTM-derived 3D terrain surface area
+3. Area difference
+4. Percentage increase caused by terrain slope
+
+The application will use:
+- A drone-derived Digital Terrain Model (DTM)
+- A farm boundary polygon OR ordered farm boundary waypoints
+- Projected coordinates in meters
+
+========================================================
+TECHNOLOGY
+========================================================
+
+Use Python.
+
+Preferred libraries:
+
+rasterio
+numpy
+geopandas
+shapely
+pyproj
+pandas
+scipy
+
+For user interface:
+Streamlit
+
+For maps:
+folium or streamlit-folium
+
+For charts:
+matplotlib
+
+Do not require QGIS to perform the calculations.
+
+========================================================
+APPLICATION WORKFLOW
+========================================================
+
+INPUT
+ |
+ +-- Drone DTM (.tif)
+ |
+ +-- Farm Boundary
+      |
+      +-- Polygon (.gpkg/.geojson/.shp)
+      |
+      OR
+      |
+      +-- Ordered waypoints (.csv/.gpkg/.geojson/.shp)
+ |
+ v
+Validate Inputs
+ |
+ v
+Calculate DTM Slope
+ |
+ v
+Calculate Surface Area per Raster Cell
+ |
+ v
+Clip / summarize raster values by Farm Polygon
+ |
+ v
+Calculate 3D Surface Area
+ |
+ v
+Calculate Planimetric Area
+ |
+ v
+Calculate Difference
+ |
+ v
+Calculate Percentage Increase
+ |
+ v
+Quality Control
+ |
+ v
+Results + Map + Export
+
+========================================================
+STEP 1 — LOAD DTM
+========================================================
+
+Allow user to upload a GeoTIFF DTM.
+
+Read automatically:
+
+CRS
+pixel width
+pixel height
+raster dimensions
+bounds
+NoData
+minimum elevation
+maximum elevation
+
+Display these values in a DTM Information panel.
+
+Check whether CRS is projected.
+
+If CRS units are degrees, display:
+
+"DTM must be projected to a metric coordinate system before
+surface-area calculation."
+
+For PCIC Region 10 workflows, provide:
+
+EPSG:32651
+WGS 84 / UTM Zone 51N
+
+as the recommended CRS.
+
+DO NOT simply assign EPSG:32651 to an incorrectly projected raster.
+
+========================================================
+STEP 2 — PIXEL AREA
+========================================================
+
+DO NOT hard-code 0.0025 m².
+
+Calculate:
+
+pixel_width = abs(transform.a)
+pixel_height = abs(transform.e)
+
+pixel_area = pixel_width * pixel_height
+
+Example:
+
+0.05 × 0.05 = 0.0025 m²
+
+Display:
+
+Pixel Width
+Pixel Height
+Pixel Area
+
+========================================================
+STEP 3 — FARM BOUNDARY
+========================================================
+
+Support two methods.
+
+METHOD A
+Upload an existing polygon.
+
+METHOD B
+Upload ordered farm waypoints.
+
+For waypoints allow selection of:
+
+Farm ID field
+Sequence/order field
+
+Group waypoints by Farm ID.
+
+Sort by sequence.
+
+Connect:
+
+Point 1
+Point 2
+Point 3
+...
+Last Point
+Point 1
+
+Create a closed polygon.
+
+Validate polygon geometry.
+
+Fix geometry if possible.
+
+Ensure farm polygon and DTM use the same projected CRS.
+
+========================================================
+STEP 4 — PLANIMETRIC AREA
+========================================================
+
+Calculate polygon area using projected coordinates.
+
+plane_area_m2 = polygon.area
+
+plane_area_ha = plane_area_m2 / 10000
+
+Store:
+
+Plane_area_m2
+Plane_area_ha
+
+========================================================
+STEP 5 — CALCULATE SLOPE
+========================================================
+
+Calculate terrain slope from the DTM.
+
+Use elevation gradient considering the actual X and Y pixel dimensions.
+
+Example:
+
+dz_dy, dz_dx = numpy.gradient(
+    elevation,
+    pixel_height,
+    pixel_width
+)
+
+slope_radians = numpy.arctan(
+    numpy.sqrt(
+        dz_dx**2 +
+        dz_dy**2
+    )
+)
+
+slope_degrees = numpy.degrees(slope_radians)
+
+Ignore NoData pixels.
+
+Store/export slope raster.
+
+========================================================
+STEP 6 — SURFACE AREA PER PIXEL
+========================================================
+
+Use:
+
+A_surface_pixel =
+A_horizontal_pixel / cos(slope_radians)
+
+where:
+
+A_horizontal_pixel =
+pixel_width × pixel_height
+
+Python logic:
+
+surface_area_pixel = (
+    pixel_area /
+    numpy.cos(slope_radians)
+)
+
+Do not calculate surface area for:
+
+NoData cells
+invalid slope cells
+cos(slope) close to zero
+
+Flag extreme slopes approaching 90 degrees.
+
+========================================================
+STEP 7 — FARM MASK
+========================================================
+
+Rasterize or mask the farm polygon using the DTM grid.
+
+Only pixels falling within the farm polygon should contribute
+to the surface-area calculation.
+
+Provide an optional:
+
+"Include boundary-touching pixels"
+
+setting.
+
+Default:
+pixel-center inclusion.
+
+========================================================
+STEP 8 — TOTAL 3D SURFACE AREA
+========================================================
+
+Calculate:
+
+surface_area_m2 =
+sum(surface_area_pixel inside farm polygon)
+
+surface_area_ha =
+surface_area_m2 / 10000
+
+Store:
+
+dtm_count
+dtm_mean
+dtm_sum
+Surface_area_ha
+
+Where:
+
+dtm_count =
+number of valid raster cells used
+
+dtm_mean =
+mean surface-area contribution per cell
+
+dtm_sum =
+total 3D surface area in square meters
+
+========================================================
+STEP 9 — AREA DIFFERENCE
+========================================================
+
+Calculate:
+
+Area_Difference_ha =
+Surface_area_ha - Plane_area_ha
+
+========================================================
+STEP 10 — PERCENTAGE INCREASE
+========================================================
+
+Calculate:
+
+Area_Increase_pc =
+(
+    Area_Difference_ha /
+    Plane_area_ha
+) * 100
+
+Prevent division by zero.
+
+========================================================
+STEP 11 — TERRAIN STATISTICS
+========================================================
+
+Also calculate:
+
+Mean_Slope_deg
+Minimum_Slope_deg
+Maximum_Slope_deg
+Median_Slope_deg
+
+Optional:
+
+Mean_Elevation_m
+Min_Elevation_m
+Max_Elevation_m
+
+========================================================
+STEP 12 — SLOPE CLASSES
+========================================================
+
+Calculate area according to the following slope classes:
+
+0–8%
+8–18%
+18–30%
+>30%
+
+Convert degree slope to percent:
+
+slope_percent =
+tan(slope_radians) * 100
+
+Calculate both:
+
+planimetric area per slope class
+
+and
+
+3D surface area per slope class
+
+Return hectares for each class.
+
+========================================================
+QUALITY CONTROL
+========================================================
+
+Automatically check:
+
+[ ] Projected CRS
+[ ] CRS units are meters
+[ ] Valid pixel resolution
+[ ] Farm polygon valid
+[ ] Farm polygon overlaps DTM
+[ ] DTM contains valid elevations
+[ ] No excessive NoData inside farm
+[ ] No unexplained extreme slopes
+[ ] Surface Area >= Planimetric Area
+
+Generate:
+
+QC Status:
+PASS
+WARNING
+FAIL
+
+Provide detailed warning messages.
+
+Examples:
+
+"Farm polygon extends outside DTM coverage."
+
+"Extreme slope values detected."
+
+"Surface area is smaller than planimetric area.
+Check DTM, CRS, polygon, and NoData handling."
+
+========================================================
+RESULTS DASHBOARD
+========================================================
+
+Display prominently:
+
+Farm ID
+
+Planimetric Area
+xxxxxx m²
+x.xxxxxx ha
+
+3D Surface Area
+xxxxxx m²
+x.xxxxxx ha
+
+Difference
+x.xxxxxx ha
+
+Increase
+xx.xx %
+
+Mean Slope
+xx.xx°
+
+Mean Slope
+xx.xx%
+
+========================================================
+COMPARISON TABLE
+========================================================
+
+Create:
+
+Farm_ID
+Plane_area_ha
+Surface_area_ha
+Area_Difference_ha
+Area_Increase_pc
+Mean_Slope_deg
+Mean_Slope_pc
+dtm_count
+QC_Status
+
+Support multiple farms.
+
+========================================================
+MAP
+========================================================
+
+Provide an interactive map displaying:
+
+Farm boundary
+DTM
+Slope
+Surface-area raster
+
+Allow layer visibility toggles.
+
+Provide legend for slope.
+
+========================================================
+CHART
+========================================================
+
+Create a comparison bar chart:
+
+Planimetric Area
+versus
+3D Surface Area
+
+Also create slope-class distribution chart.
+
+========================================================
+EXPORT
+========================================================
+
+Allow downloads of:
+
+1. Final CSV
+2. GeoPackage
+3. GeoJSON
+4. Slope GeoTIFF
+5. Surface-area GeoTIFF
+6. PDF analysis report
+
+GeoPackage is the preferred vector output.
+
+========================================================
+OUTPUT FOLDER STRUCTURE
+========================================================
+
+01_DTM/
+02_Waypoints/
+03_Farm_Polygon/
+04_Slope/
+05_Surface_Area_Raster/
+06_Zonal_Statistics/
+07_Final_Output/
+
+========================================================
+IMPORTANT SCIENTIFIC RULE
+========================================================
+
+Never assume the DTM resolution is 0.05 m.
+
+Read pixel dimensions from the raster metadata.
+
+Calculate:
+
+pixel_area =
+abs(pixel_width * pixel_height)
+
+Then:
+
+surface_area_pixel =
+pixel_area / cos(slope_radians)
+
+This allows the application to work with DTMs having resolutions
+such as:
+
+0.05 m
+0.10 m
+0.20 m
+0.50 m
+1.00 m
+
+========================================================
+PCIC APPLICATION
+========================================================
+
+The purpose of the application is to support validation of
+insured agricultural land located on sloping terrain.
+
+The software must clearly distinguish:
+
+PLANIMETRIC AREA
+Horizontal/projected farm area
+
+from
+
+3D TERRAIN SURFACE AREA
+Slope-adjusted terrain surface represented by the DTM
+
+Do not automatically declare either measurement to be the
+official insured area.
+
+Instead label the results:
+
+"Geospatial Area Analysis for Insurance Validation"
+
+and provide both measurements for technical review.

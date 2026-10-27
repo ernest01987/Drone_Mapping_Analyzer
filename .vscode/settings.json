@@ -1,0 +1,7 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/pcic_env/Scripts/python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/pcic_analyzer",
+    "${workspaceFolder}/pcic_env/Lib/site-packages"
+  ]
+}

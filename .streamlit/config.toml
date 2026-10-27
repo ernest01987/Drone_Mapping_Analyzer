@@ -1,0 +1,13 @@
+[server]
+# Maximum file upload size in megabytes (default is 200MB)
+maxUploadSize = 2048
+
+# Allow larger web socket message payloads for high-res rasters
+maxMessageSize = 500
+
+[theme]
+primaryColor = "#1A3A5C"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F6F9"
+textColor = "#2C3E50"
+font = "sans serif"

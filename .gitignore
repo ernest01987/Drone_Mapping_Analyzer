@@ -1,0 +1,107 @@
+# =============================================================================
+# .gitignore — PCIC Drone 3D Farm Area Analyzer
+# =============================================================================
+
+# Virtual Environments
+pcic_env/
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Streamlit local runtime state
+.streamlit/secrets.toml
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+*.key
+*.pem
+*.token
+*.credential*
+secrets.json
+
+# Large GIS & Drone Datasets (Do NOT commit large drone outputs to GitHub)
+*.tif
+*.tiff
+*.geotiff
+*.las
+*.laz
+*.ply
+*.dem
+*.dsm
+*.dtm
+*.ecw
+*.sid
+*.jp2
+
+# GIS Vector working files & outputs
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.gpkg-journal
+*.gpkg-wal
+
+# Generated output directories from analysis runs
+01_DTM/
+02_Waypoints/
+03_Farm_Polygon/
+04_Slope/
+05_Surface_Area_Raster/
+06_Zonal_Statistics/
+07_Final_Output/
+output/
+outputs/
+reports/*.pdf
+
+# Temporary files & archives
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Testing & Type checking artifacts
+.pytest_cache/
+.mypy_cache/
+.pytype/
+.ruff_cache/
+
+# Operating System Files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor & IDE settings (keep personal workspace cache excluded)
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace

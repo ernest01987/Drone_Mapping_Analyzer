@@ -1,0 +1,9 @@
+{
+  "venvPath": ".",
+  "venv": "pcic_env",
+  "extraPaths": [
+    "./pcic_analyzer",
+    "./pcic_env/Lib/site-packages"
+  ],
+  "reportMissingTypeStubs": false
+}

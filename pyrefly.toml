@@ -1,0 +1,5 @@
+search-path = [
+    "pcic_analyzer",
+    "pcic_env/Lib/site-packages",
+]
+replace-untyped-imports-with-any = ["*"]
